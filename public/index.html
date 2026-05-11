@@ -590,13 +590,41 @@ body {
   font-size: 17px;
   font-weight: 500;
   color: var(--ink);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .reco-card-text {
   font-size: 14px;
   font-weight: 300;
   color: var(--ink3);
   line-height: 1.7;
+}
+.reco-card-lead {
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--ink3);
+  line-height: 1.7;
+  margin-bottom: 18px;
+}
+.reco-techniques { display: flex; flex-direction: column; gap: 12px; }
+.reco-technique {
+  border-left: 2px solid var(--gold-pale);
+  padding: 10px 16px;
+  background: var(--cream);
+  border-radius: 0 3px 3px 0;
+}
+.reco-technique-title {
+  font-family: 'Martian Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 5px;
+}
+.reco-technique-text {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--ink3);
+  line-height: 1.65;
 }
 
 /* Disclaimer */
@@ -668,11 +696,11 @@ body {
 <div class="screen on" id="s-intro">
   <div class="intro-eyebrow">Безкоштовний тест · 2 хвилини</div>
   <h1 class="intro-h">Як насправді<br>почувається ваша<br><em>нервова система?</em></h1>
-  <p class="intro-p">Не просто «є/нема тривога» — а наскільки часто і як сильно. Отримайте точний портрет свого стану і персональний AI-аналіз.</p>
+  <p class="intro-p">Не просто «є/нема тривога» — а наскільки часто і як сильно. Отримайте точний портрет свого стану і персональний аналіз.</p>
   <div class="intro-pills">
     <div class="pill">14 запитань</div>
     <div class="pill">Шкала частоти GAD-7</div>
-    <div class="pill">AI-аналіз</div>
+    <div class="pill">Персональний аналіз</div>
     <div class="pill">Без реєстрації</div>
   </div>
   <button class="btn-main" onclick="startTest()">Розпочати →</button>
@@ -728,7 +756,7 @@ body {
 <div class="screen" id="s-loading">
   <div class="loading-icon"></div>
   <div class="loading-h">Аналізую відповіді</div>
-  <p class="loading-p">Claude вивчає ваш профіль тривожності і готує персональний аналіз</p>
+  <p class="loading-p">Вивчаємо ваш профіль тривожності і готуємо персональний аналіз</p>
   <div class="loading-steps" id="loading-steps">
     <div class="loading-step" id="ls-1">Підраховую бали по категоріях...</div>
     <div class="loading-step" id="ls-2">Виявляю домінуючі патерни...</div>
@@ -767,7 +795,7 @@ body {
     <div class="ai-section">
       <div class="ai-header">
         <span class="ai-header-label">Персональний аналіз</span>
-        <span class="ai-badge">Claude AI</span>
+        <span class="ai-badge">Психологічний профіль</span>
       </div>
       <div class="ai-body">
         <div class="ai-loading" id="ai-loading">
@@ -1048,7 +1076,21 @@ function buildRecos(total) {
     {
       min: 10, max: 42,
       title: 'Системна саморегуляція',
-      text: 'При помірному рівні тривожності поодинокі техніки мають обмежений ефект. Потрібна системна практика: КПТ-вправи, майндфулнес (програми MBSR), прогресивна м\'язова релаксація. Розгляньте роботу з психологом — навіть 8-10 сесій дають суттєвий результат.'
+      lead: 'При помірній тривожності разові техніки мають обмежений ефект — потрібна регулярна практика. Ось три перевірені підходи, які можна почати самостійно:',
+      techniques: [
+        {
+          title: '«Час для тривоги» — КПТ-техніка',
+          text: 'Щодня виділяйте 20–30 хвилин (наприклад, о 17:00), коли ви дозволяєте собі тривожитись і думати про проблеми. Якщо тривожна думка з\'являється в інший час — запишіть її і свідомо відкладіть до цього моменту. За 2 тижні регулярної практики це знижує фонову напругу протягом дня.'
+        },
+        {
+          title: 'Прогресивна м\'язова релаксація',
+          text: '15 хвилин перед сном: послідовно напружуйте кожну групу м\'язів на 5 секунд, потім різко відпускайте. Починайте зі стоп, закінчуйте обличчям. Це навчає тіло розпізнавати і відпускати хронічну напругу — яку ви, можливо, вже не помічаєте.'
+        },
+        {
+          title: 'Структуровані медитації (Headspace або Calm)',
+          text: 'Якщо медитація здається абстрактною — ці додатки дають чіткі 10-хвилинні сесії з конкретними вправами для тривоги. Достатньо безкоштовної версії щоб почати. Ефект відчувається після 2 тижнів щоденної практики.'
+        }
+      ]
     },
     {
       min: 15, max: 42,
@@ -1061,12 +1103,27 @@ function buildRecos(total) {
   allRecos.forEach((r, i) => {
     if (total >= r.min && total <= r.max && shown < 3) {
       shown++;
-      grid.innerHTML += `
-        <div class="reco-card">
-          <div class="reco-card-num">Рекомендація ${shown}</div>
-          <div class="reco-card-title">${r.title}</div>
-          <div class="reco-card-text">${r.text}</div>
-        </div>`;
+      if (r.techniques) {
+        const techHtml = r.techniques.map(t => `
+          <div class="reco-technique">
+            <div class="reco-technique-title">${t.title}</div>
+            <div class="reco-technique-text">${t.text}</div>
+          </div>`).join('');
+        grid.innerHTML += `
+          <div class="reco-card">
+            <div class="reco-card-num">Рекомендація ${shown}</div>
+            <div class="reco-card-title">${r.title}</div>
+            <div class="reco-card-lead">${r.lead}</div>
+            <div class="reco-techniques">${techHtml}</div>
+          </div>`;
+      } else {
+        grid.innerHTML += `
+          <div class="reco-card">
+            <div class="reco-card-num">Рекомендація ${shown}</div>
+            <div class="reco-card-title">${r.title}</div>
+            <div class="reco-card-text">${r.text}</div>
+          </div>`;
+      }
     }
   });
 }
