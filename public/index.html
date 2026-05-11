@@ -474,17 +474,52 @@ body {
   text-transform: uppercase;
 }
 
-/* Items breakdown */
+/* Section header with toggle */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 32px;
+  margin-bottom: 14px;
+  cursor: pointer;
+  user-select: none;
+}
 .breakdown-label {
   font-family: 'Martian Mono', monospace;
   font-size: 9px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--gold);
-  margin-bottom: 14px;
-  margin-top: 32px;
+  margin: 0;
 }
-.bd-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 36px; }
+.section-toggle {
+  font-family: 'Martian Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink4);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+.section-toggle::after {
+  content: '▾';
+  font-size: 11px;
+  transition: transform 0.3s ease;
+  display: inline-block;
+}
+.section-toggle.collapsed::after { transform: rotate(-90deg); }
+.section-header:hover .section-toggle { color: var(--gold); }
+
+/* Items breakdown */
+.bd-list {
+  display: flex; flex-direction: column; gap: 10px; margin-bottom: 36px;
+  overflow: hidden;
+  transition: max-height 0.4s ease, opacity 0.3s ease;
+  max-height: 2000px; opacity: 1;
+}
+.bd-list.collapsed { max-height: 0; opacity: 0; margin-bottom: 0; }
 .bd-row {
   display: flex;
   align-items: center;
@@ -509,6 +544,41 @@ body {
   background: var(--cream2);
 }
 .bd-dot.on { background: var(--gold); border-color: var(--gold); }
+
+/* Category chart */
+.cat-chart { display: flex; flex-direction: column; gap: 10px; margin-bottom: 36px; }
+.cat-row { display: flex; align-items: center; gap: 12px; }
+.cat-name {
+  font-family: 'Martian Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink4);
+  width: 96px;
+  flex-shrink: 0;
+}
+.cat-bar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.cat-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--gold);
+  width: 0;
+  transition: width 1s cubic-bezier(.4,0,.2,1);
+}
+.cat-score {
+  font-family: 'Martian Mono', monospace;
+  font-size: 10px;
+  color: var(--gold);
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+}
 
 /* AI Analysis */
 .ai-section {
@@ -789,8 +859,14 @@ body {
       </div>
     </div>
 
-    <div class="breakdown-label">Відповіді по питаннях</div>
-    <div class="bd-list" id="bd-list"></div>
+    <div class="breakdown-label" style="margin-top:32px;margin-bottom:14px">По категоріях</div>
+    <div class="cat-chart" id="cat-chart"></div>
+
+    <div class="section-header" onclick="toggleBreakdown()">
+      <div class="breakdown-label">Відповіді по питаннях</div>
+      <span class="section-toggle collapsed" id="bd-toggle">Розгорнути</span>
+    </div>
+    <div class="bd-list collapsed" id="bd-list"></div>
 
     <div class="ai-section">
       <div class="ai-header">
@@ -1018,12 +1094,22 @@ function showResult() {
     gaugePct = Math.min(96, (total / 42) * 100);
   }
 
-  document.getElementById('res-num').textContent = total;
   document.getElementById('res-level-name').textContent = levelName;
   document.getElementById('res-level-desc').textContent = levelDesc;
 
   show('result');
   document.getElementById('site-footer').style.display = 'block';
+
+  // Animated score counter
+  const numEl = document.getElementById('res-num');
+  numEl.textContent = '0';
+  let counter = 0;
+  const stepVal = Math.max(1, Math.floor(total / 30));
+  const scoreTimer = setInterval(() => {
+    counter = Math.min(counter + stepVal, total);
+    numEl.textContent = counter;
+    if (counter >= total) clearInterval(scoreTimer);
+  }, 40);
 
   setTimeout(() => {
     const gf = document.getElementById('gauge-f');
@@ -1031,7 +1117,10 @@ function showResult() {
     gf.style.width = gaugePct + '%';
   }, 200);
 
-  // Breakdown list
+  // Category chart
+  buildCatChart();
+
+  // Breakdown list (collapsed by default)
   const bdList = document.getElementById('bd-list');
   bdList.innerHTML = '';
   QUESTIONS.forEach((q, i) => {
@@ -1049,8 +1138,85 @@ function showResult() {
   // Recommendations
   buildRecos(total);
 
+  // Save to localStorage
+  saveResult(total, levelName, answers.slice());
+
   // AI analysis
   callAI(total, levelName);
+}
+
+function toggleBreakdown() {
+  const list = document.getElementById('bd-list');
+  const toggle = document.getElementById('bd-toggle');
+  const isCollapsed = list.classList.contains('collapsed');
+  if (isCollapsed) {
+    list.classList.remove('collapsed');
+    toggle.classList.remove('collapsed');
+    toggle.textContent = 'Згорнути';
+  } else {
+    list.classList.add('collapsed');
+    toggle.classList.add('collapsed');
+    toggle.textContent = 'Розгорнути';
+  }
+}
+
+function buildCatChart() {
+  const cats = {};
+  QUESTIONS.forEach((q, i) => {
+    if (!cats[q.cat]) cats[q.cat] = { sum: 0, max: 0 };
+    cats[q.cat].sum += (answers[i] || 0);
+    cats[q.cat].max += 3;
+  });
+  const chart = document.getElementById('cat-chart');
+  chart.innerHTML = '';
+  Object.entries(cats).forEach(([name, data]) => {
+    const pct = Math.round((data.sum / data.max) * 100);
+    const safeId = 'cat-' + name.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_');
+    const row = document.createElement('div');
+    row.className = 'cat-row';
+    row.innerHTML = '<div class="cat-name">' + name + '</div>' +
+      '<div class="cat-bar-track"><div class="cat-bar-fill" id="' + safeId + '"></div></div>' +
+      '<div class="cat-score">' + data.sum + '/' + data.max + '</div>';
+    chart.appendChild(row);
+    setTimeout(() => {
+      const el = document.getElementById(safeId);
+      if (el) el.style.width = pct + '%';
+    }, 400);
+  });
+}
+
+function saveResult(total, levelName, ans) {
+  try {
+    localStorage.setItem('anxiety_result', JSON.stringify({
+      total: total, levelName: levelName, answers: ans,
+      date: new Date().toLocaleDateString('uk-UA')
+    }));
+  } catch(e) {}
+}
+
+function checkSavedResult() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('anxiety_result'));
+    if (!saved) return;
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:var(--white);border:1px solid var(--border);border-radius:4px;padding:14px 20px;margin-top:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;';
+    banner.innerHTML = '<div>' +
+      '<div style="font-family:Martian Mono,monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:4px">Попередній результат · ' + saved.date + '</div>' +
+      '<div style="font-size:13px;font-weight:300;color:var(--ink3)">' + saved.levelName + ' — ' + saved.total + '/42 балів</div>' +
+      '</div>' +
+      '<button onclick="loadSavedResult()" style="font-family:Martian Mono,monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);background:var(--gold-pale);border:1px solid var(--border);border-radius:3px;padding:8px 14px;cursor:pointer;white-space:nowrap;">Переглянути →</button>';
+    const intro = document.getElementById('s-intro');
+    intro.appendChild(banner);
+  } catch(e) {}
+}
+
+function loadSavedResult() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('anxiety_result'));
+    if (!saved) return;
+    answers = saved.answers;
+    showResult();
+  } catch(e) {}
 }
 
 function buildRecos(total) {
@@ -1192,6 +1358,9 @@ function restart() {
   document.getElementById('site-footer').style.display = 'none';
   show('intro');
 }
+
+// On load — check for saved result
+checkSavedResult();
 </script>
 </body>
 </html>
