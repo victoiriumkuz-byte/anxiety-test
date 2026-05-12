@@ -697,6 +697,123 @@ body {
 }
 .btn-restart:hover { border-color: var(--gold); color: var(--gold); }
 
+/* Paywall */
+.paywall {
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.paywall-locked {
+  padding: 32px 28px;
+  background: var(--white);
+  text-align: center;
+}
+.paywall-icon {
+  font-size: 28px;
+  margin-bottom: 14px;
+  display: block;
+}
+.paywall-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.paywall-desc {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--ink3);
+  line-height: 1.7;
+  margin-bottom: 24px;
+  max-width: 380px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.paywall-features {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 28px;
+  text-align: left;
+  max-width: 300px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.paywall-feature {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--ink2);
+}
+.paywall-feature::before {
+  content: '✓';
+  font-size: 11px;
+  color: var(--gold);
+  font-family: 'Martian Mono', monospace;
+  flex-shrink: 0;
+}
+.paywall-price {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.paywall-price-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 40px;
+  font-weight: 400;
+  color: var(--gold);
+  line-height: 1;
+}
+.paywall-price-cur {
+  font-family: 'Martian Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--ink4);
+  text-transform: uppercase;
+}
+.paywall-price-note {
+  font-size: 11px;
+  font-weight: 300;
+  color: var(--ink4);
+  margin-bottom: 20px;
+}
+.btn-pay {
+  font-family: 'Martian Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--white);
+  background: var(--gold);
+  border: none;
+  padding: 16px 40px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.2s, transform 0.15s;
+  display: inline-block;
+  width: 100%;
+  max-width: 320px;
+}
+.btn-pay:hover { background: var(--gold2); transform: translateY(-1px); }
+.btn-pay:disabled { opacity: 0.6; pointer-events: none; }
+.paywall-secure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-family: 'Martian Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink4);
+}
+
 /* Footer */
 .site-footer {
   padding: 22px 48px;
@@ -721,6 +838,7 @@ body {
   .freq-grid { grid-template-columns: 1fr; }
 }
 </style>
+<script src="https://secure.wayforpay.com/server/pay-widget.js"></script>
 </head>
 <body>
 
@@ -850,22 +968,46 @@ body {
     </div>
     <div class="bd-list collapsed" id="bd-list"></div>
 
-    <div class="analysis-section">
-      <div class="analysis-hdr">
-        <span class="analysis-hdr-label">Персональний аналіз</span>
-        <span class="analysis-badge">Психологічний профіль</span>
-      </div>
-      <div class="analysis-body">
-        <div class="analysis-loading" id="ai-loading">
-          <div class="analysis-spinner"></div>
-          <span>Аналіз готується...</span>
+    <!-- PAYWALL — показується якщо не оплачено -->
+    <div class="paywall" id="paywall-block">
+      <div class="paywall-locked">
+        <span class="paywall-icon">🔒</span>
+        <div class="paywall-title">Персональний аналіз і рекомендації</div>
+        <div class="paywall-desc">Отримайте детальний розбір вашого психологічного профілю і конкретний план дій на основі ваших відповідей.</div>
+        <div class="paywall-features">
+          <div class="paywall-feature">Персональний аналіз від психолога</div>
+          <div class="paywall-feature">Розбір домінуючих патернів тривоги</div>
+          <div class="paywall-feature">3 конкретні рекомендації під ваш профіль</div>
+          <div class="paywall-feature">Пояснення стану нервової системи</div>
         </div>
-        <div class="analysis-text" id="ai-text" style="display:none"></div>
+        <div class="paywall-price">
+          <span class="paywall-price-num">99</span>
+          <span class="paywall-price-cur">грн</span>
+        </div>
+        <div class="paywall-price-note">Одноразова оплата · Доступ одразу після оплати</div>
+        <button class="btn-pay" id="btn-pay" onclick="openPayment()">Отримати аналіз →</button>
+        <div class="paywall-secure">🔐 Оплата через WayForPay · Visa / Mastercard / Apple Pay</div>
       </div>
     </div>
 
-    <div class="sec-label" style="margin-top:4px">Рекомендації</div>
-    <div class="reco-grid" id="reco-grid"></div>
+    <!-- КОНТЕНТ — показується після оплати -->
+    <div id="paid-content" style="display:none">
+      <div class="analysis-section">
+        <div class="analysis-hdr">
+          <span class="analysis-hdr-label">Персональний аналіз</span>
+          <span class="analysis-badge">Психологічний профіль</span>
+        </div>
+        <div class="analysis-body">
+          <div class="analysis-loading" id="ai-loading">
+            <div class="analysis-spinner"></div>
+            <span>Аналіз готується...</span>
+          </div>
+          <div class="analysis-text" id="ai-text" style="display:none"></div>
+        </div>
+      </div>
+      <div class="sec-label" style="margin-top:4px">Рекомендації</div>
+      <div class="reco-grid" id="reco-grid"></div>
+    </div>
 
     <div class="disclaimer">
       <p>Цей тест є інструментом первинної самодіагностики на основі шкали GAD-7. Він не є медичним діагнозом. При виражених симптомах зверніться до кваліфікованого спеціаліста — психолога, психотерапевта або лікаря.</p>
@@ -983,6 +1125,10 @@ function showResult() {
   show('result');
   document.getElementById('site-footer').style.display = 'block';
 
+  // Зберігаємо для використання після оплати
+  _pendingTotal = total;
+  _pendingLevel = levelName;
+
   // Animated counter
   const numEl = document.getElementById('res-num');
   numEl.textContent = '0';
@@ -1010,9 +1156,12 @@ function showResult() {
     bdList.innerHTML += `<div class="bd-row"><div class="bd-q">${q.text}</div><div class="bd-dots">${dots}</div><div class="bd-val">${val}/3</div></div>`;
   });
 
-  buildRecos(total);
   saveResult(total, levelName, answers.slice());
-  callAI(total, levelName);
+
+  // Якщо вже оплачено — одразу показуємо контент
+  if (checkIfPaid()) {
+    unlockContent(false);
+  }
 }
 
 function toggleBreakdown() {
@@ -1144,6 +1293,93 @@ function restart() {
   document.getElementById('prog').style.width = '0%';
   document.getElementById('site-footer').style.display = 'none';
   show('intro');
+}
+
+// ── PAYMENT ──
+const WFP_MERCHANT = 'mystiora_com';
+const WFP_DOMAIN   = 'mystiora.com';
+const PRODUCT_NAME = 'Персональний аналіз тривожності — Protocol';
+const PRICE        = 99;
+
+let _pendingTotal = 0;
+let _pendingLevel = '';
+
+function generateOrderRef() {
+  return 'anxiety_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+}
+
+function openPayment() {
+  const btn = document.getElementById('btn-pay');
+  btn.disabled = true;
+  btn.textContent = 'Відкриваємо форму оплати...';
+
+  const orderRef  = generateOrderRef();
+  const orderDate = Math.floor(Date.now() / 1000);
+
+  try { localStorage.setItem('wfp_order_ref', orderRef); } catch(e) {}
+
+  fetch('/api/payment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ orderRef, orderDate, amount: PRICE })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) throw new Error(data.error);
+    const wfp = new Wayforpay();
+    wfp.run({
+      merchantAccount:    WFP_MERCHANT,
+      merchantDomainName: WFP_DOMAIN,
+      authorizationType:  'SimpleSignature',
+      merchantSignature:  data.signature,
+      orderReference:     orderRef,
+      orderDate:          orderDate,
+      amount:             PRICE,
+      currency:           'UAH',
+      productName:        [PRODUCT_NAME],
+      productPrice:       [PRICE],
+      productCount:       [1],
+      returnUrl:          window.location.origin + window.location.pathname + '?paid=' + orderRef,
+      serviceUrl:         'https://anxiety-test-sandy.vercel.app/api/wfp-callback',
+      language:           'UA',
+    },
+    function() { unlockContent(true); },
+    function() { btn.disabled = false; btn.textContent = 'Отримати аналіз →'; },
+    function() { btn.disabled = false; btn.textContent = 'Отримати аналіз →'; }
+    );
+  })
+  .catch(err => {
+    console.error(err);
+    btn.disabled = false;
+    btn.textContent = 'Отримати аналіз →';
+    alert('Помилка відкриття форми. Спробуйте ще раз.');
+  });
+}
+
+function unlockContent(saveToStorage) {
+  if (saveToStorage) {
+    try { localStorage.setItem('anxiety_paid', '1'); } catch(e) {}
+  }
+  document.getElementById('paywall-block').style.display = 'none';
+  document.getElementById('paid-content').style.display  = 'block';
+  if (!document.getElementById('ai-text').textContent) {
+    buildRecos(_pendingTotal);
+    callAI(_pendingTotal, _pendingLevel);
+  }
+}
+
+function checkIfPaid() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const paidRef   = urlParams.get('paid');
+  if (paidRef) {
+    const savedRef = localStorage.getItem('wfp_order_ref');
+    if (paidRef === savedRef) {
+      localStorage.setItem('anxiety_paid', '1');
+      window.history.replaceState({}, '', window.location.pathname);
+      return true;
+    }
+  }
+  return localStorage.getItem('anxiety_paid') === '1';
 }
 
 checkSavedResult();
