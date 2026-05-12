@@ -1156,13 +1156,12 @@ function showResult() {
     bdList.innerHTML += `<div class="bd-row"><div class="bd-q">${q.text}</div><div class="bd-dots">${dots}</div><div class="bd-val">${val}/3</div></div>`;
   });
 
-  saveResult(total, levelName, answers.slice());
-
-  // Якщо вже оплачено — одразу показуємо контент
-  if (checkIfPaid()) {
-    unlockContent(false);
-  }
-}
+  // Paywall тимчасово вимкнений — контент відкритий
+  // unlockContent(false); // розкоментуй щоб увімкнути оплату назад
+  document.getElementById('paywall-block').style.display = 'none';
+  document.getElementById('paid-content').style.display = 'block';
+  buildRecos(_pendingTotal);
+  callAI(_pendingTotal, _pendingLevel);
 
 function toggleBreakdown() {
   const list = document.getElementById('bd-list');
